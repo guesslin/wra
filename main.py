@@ -1,63 +1,67 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
+import sys
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as ec
 
 
 wra_url = 'http://fhy.wra.gov.tw/ReservoirPage_2011/StorageCapacity.aspx'
+save_dir = '/home/guesslin/Downloads'
 
 
-def define_browser(url):
+def define_browser():
     fp = webdriver.FirefoxProfile()
     fp.set_preference("browser.helperApps.neverAsk.saveToDisk",
                       "application/vnd.xls")
     browser = webdriver.Firefox(fp)
-    browser.get(url)
     return browser
 
 
-def select_dropdown_option(driver, select_locator, option_text):
-    for option in driver.find_elements_by_tag_name(select_locator):
-        if option.text == option_text:
-            option.click()
-            break
-
-
-def small_month(month):
-    if month == 2 or month == 4 or month == 6 or month == 9 or month == 11:
-        return True
-    return False
+def write_file(year, month, day, page_source):
+    with open(os.path.join(save_dir, '{}-{}-{}.html'.format(year, month, day)),
+              'w') as fout:
+        fout.write(page_source.encode('utf-8'))
 
 
 def main():
-    browser = define_browser(wra_url)
-    """
-    query_method = browser.find_element_by_id('cphMain_cboSearch')
-    select_dropdown_option(query_method, 'option', u'所有水庫')
-    """
-    for year in range(2003, 2015):
-        query_year = browser.find_element_by_id('cphMain_ucDate_cboYear')
-        select_dropdown_option(query_year, 'option', str(year))
-        for month in range(1, 13):
-            query_month = browser.find_element_by_id('cphMain_ucDate_cboMonth')
-            select_dropdown_option(query_month, 'option', str(month))
-            for day in range(1, 32):
-                query_day = browser.find_element_by_id('cphMain_ucDate_cboDay')
-                select_dropdown_option(query_day, 'option', str(day))
-
-                excel_download = browser.find_element_by_id('cphMain_btnExcel')
-                excel_download.click()
-
-    for month in range(1, 5):
-        query_month = browser.find_element_by_id('cphMain_ucDate_cboMonth')
-        select_dropdown_option(query_month, 'option', str(month))
-        for day in range(1, 32):
-            query_day = browser.find_element_by_id('cphMain_ucDate_cboDay')
-            select_dropdown_option(query_day, 'option', str(day))
-
-            excel_download = browser.find_element_by_id('cphMain_btnExcel')
-            excel_download.click()
-
+    browser = define_browser()
+    browser.get(wra_url)
+    year = sys.argv[1]
+    month = sys.argv[2]
+    day = sys.argv[3]
+    Select(browser.find_element_by_id('cphMain_ucDate_cboYear')
+           ).select_by_visible_text(year)
+    Select(browser.find_element_by_id('cphMain_ucDate_cboMonth')
+           ).select_by_visible_text(month)
+    for day in range(int(day), 32):
+        try:
+            el = WebDriverWait(browser, 10).until(
+                ec.presence_of_element_located((By.ID,
+                                                'cphMain_ucDate_cboDay'))
+            )
+        except Exception as e:
+            print str(e)
+            browser.quit()
+            sys.exit(-1)
+        else:
+            Select(el).select_by_visible_text(str(day))
+        try:
+            submit = WebDriverWait(browser, 10).until(
+                ec.presence_of_element_located((By.ID, 'cphMain_btnQuery'))
+            )
+        except Exception as e:
+            print str(e)
+            browser.quit()
+            sys.exit(-1)
+        else:
+            submit.click()
+            write_file(year, month, day, browser.page_source)
+    browser.quit()
 
 if __name__ == '__main__':
     main()
