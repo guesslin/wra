@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
+from selenium.common.exceptions import StaleElementReferenceException
 
 
 wra_url = 'http://fhy.wra.gov.tw/ReservoirPage_2011/StorageCapacity.aspx'
@@ -44,21 +45,20 @@ def main():
                 ec.presence_of_element_located((By.ID,
                                                 'cphMain_ucDate_cboDay'))
             )
-        except Exception as e:
-            print str(e)
+        except StaleElementReferenceException:
             browser.quit()
-            sys.exit(-1)
-        else:
+            del browser
+            browser = define_browser()
+            browser.get(wra_url)
+            Select(browser.find_element_by_id('cphMain_ucDate_cboYear')
+                   ).select_by_visible_text(year)
+            Select(browser.find_element_by_id('cphMain_ucDate_cboMonth')
+                   ).select_by_visible_text(month)
+        finally:
             Select(el).select_by_visible_text(str(day))
-        try:
             submit = WebDriverWait(browser, 10).until(
                 ec.presence_of_element_located((By.ID, 'cphMain_btnQuery'))
             )
-        except Exception as e:
-            print str(e)
-            browser.quit()
-            sys.exit(-1)
-        else:
             submit.click()
             write_file(year, month, day, browser.page_source)
     browser.quit()
