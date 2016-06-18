@@ -12,7 +12,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 
 wra_url = 'http://fhy.wra.gov.tw/ReservoirPage_2011/StorageCapacity.aspx'
-save_dir = '/home/guesslin/Downloads'
+save_dir = './Downloads/'
 
 
 def define_browser():
